@@ -39,20 +39,16 @@ contract Lawfi is Ownable2Step, ERC1155Burnable, ERC1155Supply, DefaultOperatorF
   /* User */
   // verified
   function claim(uint256 _tokenId, uint256 _maxAmount, uint256 _amount, bytes calldata _signature) external {
-    require(tx.origin == msg.sender, "Not allowed");
+    address account = msg.sender;
+    require(tx.origin == account, "Not allowed");
     require(claimActive, "Not active");
     require(_amount > 0, "Invalid amount");
-    bytes32 message = keccak256(abi.encodePacked("lawfi-claim", msg.sender, _tokenId, _maxAmount));
+    bytes32 message = keccak256(abi.encodePacked("lawfi-claim", account, _tokenId, _maxAmount));
     require(message.toEthSignedMessageHash().recover(_signature) == verifier, "Invalid signature");
-    require(claimed[msg.sender] + _amount <= _maxAmount, "Exceeds max");
+    require(claimed[account] + _amount <= _maxAmount, "Exceeds max");
 
-    for (uint256 i = 0; i < _amount; ) {
-      _mint(msg.sender, _tokenId, _amount, "0x");
-      unchecked {
-        i++;
-        claimed[msg.sender]++;
-      }
-    }
+    claimed[account] += _amount;
+    _mint(account, _tokenId, _amount, "0x");
   }
 
   /* Admin */
@@ -104,7 +100,7 @@ contract Lawfi is Ownable2Step, ERC1155Burnable, ERC1155Supply, DefaultOperatorF
 
   /* Internal */
   function _beforeTokenTransfer(address operator, address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) internal override(ERC1155Supply, ERC1155) {
-    require(msg.sender == owner(), "Only owner");
+    require(from == address(0) || operator == owner(), "Only owner");
     super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
   }
 
